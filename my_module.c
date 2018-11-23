@@ -241,16 +241,22 @@ ssize_t my_write(struct file *filp, const char *buf, size_t count, loff_t *f_pos
 
 		// do reallocaiton
 		char* temp_mem_buff = curr_device->mem_buffer;
-		char* new_mem_buff = kmalloc(sizeof(char)*(curr_device->w_seek + count + pid_size + 6), GFP_KERNEL);
-		new_mem_buff = temp_mem_buff;
-		curr_device->mem_buffer = new_mem_buff;
+		char* new_mem_buff = kmalloc((curr_device->w_seek) + count + pid_size + 6, GFP_KERNEL);
+		printk(KERN_WARNING "%s: %s: before updating new buff, the curr device buff: %s\n", MY_DEVICE, __FUNCTION__, curr_device->mem_buffer);
+		printk(KERN_WARNING "%s: %s: the buffer that we want to write: %s\n", MY_DEVICE, __FUNCTION__, buf);
+		int i = 0;
+		for (; i < curr_device->w_seek; i++) {
+			new_mem_buff[i] = curr_device->mem_buffer[i];
+		}
+		
 		kfree(temp_mem_buff);
+		curr_device->mem_buffer = new_mem_buff;
+		printk(KERN_WARNING "%s: %s: after updating new buff, the curr device buff: %s\n", MY_DEVICE, __FUNCTION__, curr_device->mem_buffer);
 		if (!curr_device->mem_buffer) {
 			printk(KERN_WARNING "%s: %s: malloc failed for device buffer", MY_DEVICE, __FUNCTION__);
 			return -ENOMEM;
 		}
 	}
-
 	curr_device->mem_buffer[curr_device->w_seek] = '[';
 	temp = pid_size;
 	int i = 1;
@@ -268,7 +274,7 @@ ssize_t my_write(struct file *filp, const char *buf, size_t count, loff_t *f_pos
 		printk("%s: %s: not all bytes were copied\n", MY_DEVICE, __FUNCTION__);
 		return -ENOMEM;
 	}
-	printk(KERN_WARNING "The PID is %d, the string is: %s \n", curr_pid, curr_device->mem_buffer);
+
 	ret_val = count - size_not_write;
 	curr_device->mem_buffer[curr_device->w_seek + pid_size + 3 + ret_val] = '\n';
 	curr_device->w_seek += ret_val + pid_size + 4;
